@@ -15,6 +15,7 @@ type: Feature
 - Item 2
 
 # Atividades a serem realizadas
+
 - [ ] Item 1
 - [ ] Item 2
 - [ ] Item 3
