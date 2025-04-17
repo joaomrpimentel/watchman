@@ -1,0 +1,44 @@
+name: Notify Discord on Release/Tag
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - '*' # Qualquer tag criada
+  workflow_dispatch:
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send message to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Webhook URL não está definido!"
+            exit 1
+          fi
+
+          EVENT_NAME="${{ github.event_name }}"
+          REPO="${{ github.repository }}"
+          ACTOR="${{ github.actor }}"
+
+          if [ "$EVENT_NAME" = "release" ]; then
+            TAG_NAME="${{ github.event.release.tag_name }}"
+            RELEASE_URL="${{ github.event.release.html_url }}"
+            CONTENT="📦 Nova release publicada: **$TAG_NAME**\n$RELEASE_URL"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            # Extrai a tag da ref
+            REF="${{ github.ref }}"
+            TAG_NAME="${REF#refs/tags/}"
+            CONTENT="🏷️ Nova tag criada: **$TAG_NAME**\nhttps://github.com/$REPO/releases/tag/$TAG_NAME"
+          else
+            CONTENT="🔔 Notificação manual disparada por $ACTOR no repositório $REPO."
+          fi
+
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"$CONTENT\"}" \
+               "$DISCORD_WEBHOOK_URL"
