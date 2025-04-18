@@ -1,0 +1,136 @@
+version: "3.7"
+services:
+
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-airflow}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-airflow}
+      - POSTGRES_DB=${POSTGRES_DB:-airflow}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - airflow 
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minio_user
+      - MINIO_ROOT_PASSWORD=minio_password
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - airflow
+
+  airflow-webserver:
+    image: apache/airflow:2.3.4-python3.9
+    entrypoint: /opt/airflow/entrypoint.sh webserver
+    depends_on:
+      - minio
+      - postgres
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__RABBITMQ__RABBITMQ_HOST=rabbitmq
+      - AIRFLOW__RABBITMQ__RABBITMQ_USER=${RABBITMQ_DEFAULT_USER:-rabbitmq}
+      - AIRFLOW__RABBITMQ__RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-rabbitmq}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY:-$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minio_user
+      - MINIO_SECRET_KEY=minio_password
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    networks:
+      - airflow
+    restart: always
+
+  airflow-scheduler:
+    image: apache/airflow:2.3.4-python3.9
+    entrypoint: /opt/airflow/entrypoint.sh scheduler
+    depends_on: 
+    depends_on:
+      - postgres
+      - airflow-webserver
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__RABBITMQ__RABBITMQ_HOST=rabbitmq
+      - AIRFLOW__RABBITMQ__RABBITMQ_USER=${RABBITMQ_DEFAULT_USER:-rabbitmq}
+      - AIRFLOW__RABBITMQ__RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-rabbitmq}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY:-$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minio_user
+      - MINIO_SECRET_KEY=minio_password
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - airflow
+    restart: always
+
+  airflow-worker:
+    image: apache/airflow:2.3.4-python3.9
+    entrypoint: /opt/airflow/entrypoint.sh celery worker
+    depends_on:
+      - postgres
+      - airflow-webserver
+      - airflow-scheduler
+      - minio
+      - rabbitmq
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AIRFLOW__RABBITMQ__RABBITMQ_HOST=rabbitmq
+      - AIRFLOW__RABBITMQ__RABBITMQ_USER=${RABBITMQ_DEFAULT_USER:-rabbitmq}
+      - AIRFLOW__RABBITMQ__RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-rabbitmq}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY:-$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minio_user
+      - MINIO_SECRET_KEY=minio_password
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - airflow
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:latest
+    networks:
+      - airflow
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-rabbitmq}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-rabbitmq}
+
+  flower:
+    image: mher/flower:latest
+    ports:
+      - "5555:5555"
+    depends_on:
+      - rabbitmq
+      - airflow-webserver
+      - airflow-scheduler
+      - airflow-worker
+    networks:
+      - airflow
+    command: celery --broker=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672/ flower
+
+volumes:
+  postgres_data:
+  minio-data:
+  airflow_logs:
+
+networks:
+  airflow:
