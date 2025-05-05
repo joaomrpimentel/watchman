@@ -1,0 +1,34 @@
+.env
+
+# Não ignorar o arquivo de exemplo
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Diretórios do Airflow
+airflow_home/
+airflow.db
+airflow.cfg
+webserver_config.py
+
+# Dados
+data/
+
+# Diretórios de cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+venv/
+env/
+ENV/
+
+# Arquivos temporários
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
