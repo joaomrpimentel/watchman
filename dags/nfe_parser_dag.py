@@ -85,32 +85,6 @@ CREATE TABLE IF NOT EXISTS PRODUTO (
     frete DECIMAL,
     id SERIAL PRIMARY KEY
 );
-
--- Adicionando constraints depois da criação das tabelas
-ALTER TABLE IF EXISTS NOTA_FISCAL ADD CONSTRAINT IF NOT EXISTS FK_NOTA_FISCAL_ID_VENDEDOR
-    FOREIGN KEY (idVendedor)
-    REFERENCES PESSOA_JURIDICA (id)
-    ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS NOTA_FISCAL ADD CONSTRAINT IF NOT EXISTS FK_NOTA_FISCAL_ID_COMPRADOR
-    FOREIGN KEY (idComprador)
-    REFERENCES PESSOA_FISICA (id)
-    ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS ITEM ADD CONSTRAINT IF NOT EXISTS FK_ITEM_2
-    FOREIGN KEY (idNotaFiscal)
-    REFERENCES NOTA_FISCAL (id)
-    ON DELETE RESTRICT;
-
-ALTER TABLE IF EXISTS SERVICO ADD CONSTRAINT IF NOT EXISTS FK_SERVICO_2
-    FOREIGN KEY (id)
-    REFERENCES ITEM (id)
-    ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS PRODUTO ADD CONSTRAINT IF NOT EXISTS FK_PRODUTO_2
-    FOREIGN KEY (id)
-    REFERENCES ITEM (id)
-    ON DELETE CASCADE;
         """
     )
 
@@ -148,5 +122,5 @@ ALTER TABLE IF EXISTS PRODUTO ADD CONSTRAINT IF NOT EXISTS FK_PRODUTO_2
     )
 
     # Definir o fluxo de execução das tarefas
-    # create_table >> process_nfe_files >> clean_old_processed_files
-    process_nfe_files >> clean_old_processed_files
+    create_table >> process_nfe_files >> clean_old_processed_files
+    # process_nfe_files >> clean_old_processed_files

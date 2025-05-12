@@ -151,8 +151,8 @@ class NFeParserOperator(BaseOperator):
             # pessoa_juridica = {}
             # endereco_entidade_social = {}
             # item = {}
-            produto = {}
-            
+            # produto = {}
+            self.log.warning(f"Dicionários {lst_dics}")
             # Identificação da NFe
             ide = root.find('.//nfe:ide', ns)
             if ide is not None:
@@ -167,6 +167,8 @@ class NFeParserOperator(BaseOperator):
                 
                 # nota_fiscal['natureza_operacao'] = ide.findtext('nfe:natOp', '', ns)
             # lst_dics.append(nota_fiscal)
+
+            self.log.warning(f"Dicionários {lst_dics}")
 
             # Informações do emitente
             emit = root.find('.//nfe:emit', ns)
@@ -192,7 +194,7 @@ class NFeParserOperator(BaseOperator):
                     lst_dics['endereco_entidade_social']['estado'] = enderEmit.findtext('nfe:UF', '', ns)
                     lst_dics['endereco_entidade_social']['bairro'] = enderEmit.findtext('nfe:xBairro', '', ns)
                     lst_dics['endereco_entidade_social']['numero'] = enderEmit.findtext('nfe:nro', '', ns)
-            
+            self.log.warning(f"Dicionários {lst_dics}")
             # lst_dics.append(endereco_entidade_social)
             # Informações do destinatário
             dest = root.find('.//nfe:dest', ns)
@@ -212,7 +214,7 @@ class NFeParserOperator(BaseOperator):
                 #         'uf': enderDest.findtext('nfe:UF', '', ns),
                 #         'cep': enderDest.findtext('nfe:CEP', '', ns),
                 #     }
-            
+            self.log.warning(f"Dicionários {lst_dics}")
             # Extrair itens da NFe
             # itens = []
             # for i, det in enumerate(root.findall('.//nfe:det', ns)):
@@ -321,6 +323,7 @@ class NFeParserOperator(BaseOperator):
             # nota_fiscal['data_processamento'] = datetime.now()
             # nota_fiscal['nome_arquivo'] = os.path.basename(caminho_xml)
             
+            self.log.warning(f"Dicionários {lst_dics}")
             return lst_dics
         
         except Exception as e:
