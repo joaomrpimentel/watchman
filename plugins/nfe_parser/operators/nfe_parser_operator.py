@@ -146,6 +146,10 @@ class NFeParserOperator(BaseOperator):
             
             # Extrair informações básicas da NFe
             lst_dics = {}
+            lst_dics['nota_fiscal'] = {}
+            lst_dics['endereco_entidade_social'] = {}
+            lst_dics['pessoa_fisica'] = {}
+            lst_dics['pessoa_juridica'] = {}
             # nota_fiscal = {}
             # pessoa_fisica = {}
             # pessoa_juridica = {}
