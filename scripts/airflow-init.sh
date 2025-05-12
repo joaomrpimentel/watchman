@@ -64,6 +64,12 @@ if [[ ${warning_resources} == "true" ]]; then
   echo
 fi
 
-mkdir -p /sources/logs /sources/dags /sources/plugins
-chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+# USER root
+# mkdir -p /sources/logs /sources/dags /sources/plugins
+# chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
+mkdir -p ./sources && \
+chown -R airflow:root ./sources && \
+chmod 777 ./sources && \
+mkdir -p ./sources/logs ./sources/dags ./sources/plugins && \
+chown -R airflow:root ./sources
 exec airflow db init

@@ -69,7 +69,7 @@ class NFeParserOperator(BaseOperator):
             
             try:
                 # Extrair dados do XML
-                nfe_data = self.extrair_dados_nfe(xml_path)
+                nfe_data = self.extrair_nota_fiscal(xml_path)
                 
                 if not nfe_data:
                     self.log.warning(f"Não foi possível extrair dados do arquivo: {xml_path}")
@@ -129,7 +129,7 @@ class NFeParserOperator(BaseOperator):
             self.log.error(f"Erro ao converter data '{date_str}': {str(e)}")
             return None
     
-    def extrair_dados_nfe(self, caminho_xml: str) -> Optional[Dict[str, Any]]:
+    def extrair_nota_fiscal(self, caminho_xml: str) -> Optional[Dict[str, Any]]:
         """
         Extrai os principais dados de uma Nota Fiscal Eletrônica no formato XML.
         
@@ -145,202 +145,223 @@ class NFeParserOperator(BaseOperator):
             ns = {'nfe': 'http://www.portalfiscal.inf.br/nfe'}
             
             # Extrair informações básicas da NFe
-            dados_nfe = {}
+            lst_dics = {}
+            # nota_fiscal = {}
+            # pessoa_fisica = {}
+            # pessoa_juridica = {}
+            # endereco_entidade_social = {}
+            # item = {}
+            produto = {}
             
             # Identificação da NFe
             ide = root.find('.//nfe:ide', ns)
             if ide is not None:
-                dados_nfe['chave_acesso'] = root.find('.//nfe:infNFe', ns).attrib.get('Id', '')[3:]
-                dados_nfe['numero'] = ide.findtext('nfe:nNF', '', ns)
-                dados_nfe['serie'] = ide.findtext('nfe:serie', '', ns)
+                lst_dics['nota_fiscal']['chaveAcesso'] = root.find('.//nfe:infNFe', ns).attrib.get('Id', '')[3:]
+                lst_dics['nota_fiscal']['numero'] = ide.findtext('nfe:nNF', '', ns)
+                lst_dics['nota_fiscal']['serie'] = ide.findtext('nfe:serie', '', ns)
                 
                 # Converter data de emissão para timestamp
                 data_emissao_str = ide.findtext('nfe:dhEmi', '', ns)
                 data_emissao = self.parse_date_to_timestamp(data_emissao_str)
-                dados_nfe['data_emissao'] = data_emissao if data_emissao else None
+                lst_dics['nota_fiscal']['dataEmissao'] = data_emissao if data_emissao else None
                 
-                dados_nfe['natureza_operacao'] = ide.findtext('nfe:natOp', '', ns)
-                
+                # nota_fiscal['natureza_operacao'] = ide.findtext('nfe:natOp', '', ns)
+            # lst_dics.append(nota_fiscal)
+
             # Informações do emitente
             emit = root.find('.//nfe:emit', ns)
             if emit is not None:
-                dados_nfe['emitente_nome'] = emit.findtext('nfe:xNome', '', ns)
-                dados_nfe['emitente_cnpj'] = emit.findtext('nfe:CNPJ', '', ns)
-                dados_nfe['emitente_ie'] = emit.findtext('nfe:IE', '', ns)
+                # pessoa_juridica['emitente_nome'] = emit.findtext('nfe:xNome', '', ns)
+                lst_dics['pessoa_juridica']['cnpj'] = emit.findtext('nfe:CNPJ', '', ns)
+                lst_dics['pessoa_juridica']['inscricaoEstadual'] = emit.findtext('nfe:IE', '', ns)
                 
                 # Endereço do emitente
                 enderEmit = emit.find('nfe:enderEmit', ns)
                 if enderEmit is not None:
-                    dados_nfe['emitente_endereco'] = {
-                        'logradouro': enderEmit.findtext('nfe:xLgr', '', ns),
-                        'numero': enderEmit.findtext('nfe:nro', '', ns),
-                        'bairro': enderEmit.findtext('nfe:xBairro', '', ns),
-                        'municipio': enderEmit.findtext('nfe:xMun', '', ns),
-                        'uf': enderEmit.findtext('nfe:UF', '', ns),
-                        'cep': enderEmit.findtext('nfe:CEP', '', ns),
-                    }
+                    # endereco_entidade_social['emitente_endereco'] = {
+                    #     'logradouro': enderEmit.findtext('nfe:xLgr', '', ns),
+                    #     'numero': enderEmit.findtext('nfe:nro', '', ns),
+                    #     'bairro': enderEmit.findtext('nfe:xBairro', '', ns),
+                    #     'municipio': enderEmit.findtext('nfe:xMun', '', ns),
+                    #     'uf': enderEmit.findtext('nfe:UF', '', ns),
+                    #     'cep': enderEmit.findtext('nfe:CEP', '', ns),
+                    # }
+                    lst_dics['endereco_entidade_social']['cep'] = enderEmit.findtext('nfe:CEP', '', ns)
+                    lst_dics['endereco_entidade_social']['rua'] = enderEmit.findtext('nfe:xLgr', '', ns)
+                    lst_dics['endereco_entidade_social']['cidade'] = enderEmit.findtext('nfe:xMun', '', ns)
+                    lst_dics['endereco_entidade_social']['estado'] = enderEmit.findtext('nfe:UF', '', ns)
+                    lst_dics['endereco_entidade_social']['bairro'] = enderEmit.findtext('nfe:xBairro', '', ns)
+                    lst_dics['endereco_entidade_social']['numero'] = enderEmit.findtext('nfe:nro', '', ns)
             
+            # lst_dics.append(endereco_entidade_social)
             # Informações do destinatário
             dest = root.find('.//nfe:dest', ns)
             if dest is not None:
-                dados_nfe['destinatario_nome'] = dest.findtext('nfe:xNome', '', ns)
-                dados_nfe['destinatario_cnpj'] = dest.findtext('nfe:CNPJ', '', ns) or dest.findtext('nfe:CPF', '', ns)
-                dados_nfe['destinatario_ie'] = dest.findtext('nfe:IE', '', ns)
+                # pessoa_fisica['destinatario_nome'] = dest.findtext('nfe:xNome', '', ns)
+                lst_dics['pessoa_fisica']['cpf'] = dest.findtext('nfe:CNPJ', '', ns) or dest.findtext('nfe:CPF', '', ns)
+                # nota_fiscal['destinatario_ie'] = dest.findtext('nfe:IE', '', ns)
                 
                 # Endereço do destinatário
-                enderDest = dest.find('nfe:enderDest', ns)
-                if enderDest is not None:
-                    dados_nfe['destinatario_endereco'] = {
-                        'logradouro': enderDest.findtext('nfe:xLgr', '', ns),
-                        'numero': enderDest.findtext('nfe:nro', '', ns),
-                        'bairro': enderDest.findtext('nfe:xBairro', '', ns),
-                        'municipio': enderDest.findtext('nfe:xMun', '', ns),
-                        'uf': enderDest.findtext('nfe:UF', '', ns),
-                        'cep': enderDest.findtext('nfe:CEP', '', ns),
-                    }
+                # enderDest = dest.find('nfe:enderDest', ns)
+                # if enderDest is not None:
+                #     nota_fiscal['destinatario_endereco'] = {
+                #         'logradouro': enderDest.findtext('nfe:xLgr', '', ns),
+                #         'numero': enderDest.findtext('nfe:nro', '', ns),
+                #         'bairro': enderDest.findtext('nfe:xBairro', '', ns),
+                #         'municipio': enderDest.findtext('nfe:xMun', '', ns),
+                #         'uf': enderDest.findtext('nfe:UF', '', ns),
+                #         'cep': enderDest.findtext('nfe:CEP', '', ns),
+                #     }
             
             # Extrair itens da NFe
-            itens = []
-            for i, det in enumerate(root.findall('.//nfe:det', ns)):
-                item = {}
-                item['numero_item'] = det.attrib.get('nItem', str(i+1))
+            # itens = []
+            # for i, det in enumerate(root.findall('.//nfe:det', ns)):
+            #     item = {}
+            #     # item['numero_item'] = det.attrib.get('nItem', str(i+1))
                 
-                prod = det.find('nfe:prod', ns)
-                if prod is not None:
-                    item['codigo'] = prod.findtext('nfe:cProd', '', ns)
-                    item['descricao'] = prod.findtext('nfe:xProd', '', ns)
-                    item['ncm'] = prod.findtext('nfe:NCM', '', ns)
-                    item['cfop'] = prod.findtext('nfe:CFOP', '', ns)
-                    item['unidade'] = prod.findtext('nfe:uCom', '', ns)
-                    item['quantidade'] = prod.findtext('nfe:qCom', '', ns)
-                    item['valor_unitario'] = prod.findtext('nfe:vUnCom', '', ns)
-                    item['valor_total'] = prod.findtext('nfe:vProd', '', ns)
+            #     prod = det.find('nfe:prod', ns)
+            #     if prod is not None:
+            #         # item['codigo'] = prod.findtext('nfe:cProd', '', ns)
+            #         item['discriminacao'] = prod.findtext('nfe:xProd', '', ns)
+            #         # item['ncm'] = prod.findtext('nfe:NCM', '', ns)
+            #         # item['cfop'] = prod.findtext('nfe:CFOP', '', ns)
+            #         item['unidade'] = prod.findtext('nfe:uCom', '', ns)
+            #         # item['quantidade'] = prod.findtext('nfe:qCom', '', ns)
+            #         item['valor'] = prod.findtext('nfe:vUnCom', '', ns)
+            #         # item['valor_total'] = prod.findtext('nfe:vProd', '', ns)
                 
-                # Informações sobre impostos
-                imposto = det.find('nfe:imposto', ns)
-                if imposto is not None:
-                    icms = imposto.find('.//nfe:ICMS', ns)
-                    if icms is not None:
-                        for icms_tipo in icms:
-                            if icms_tipo.tag.endswith('}ICMS00') or icms_tipo.tag.endswith('}ICMS10') or \
-                               icms_tipo.tag.endswith('}ICMS20') or icms_tipo.tag.endswith('}ICMS30') or \
-                               icms_tipo.tag.endswith('}ICMS40') or icms_tipo.tag.endswith('}ICMS51') or \
-                               icms_tipo.tag.endswith('}ICMS60') or icms_tipo.tag.endswith('}ICMS70') or \
-                               icms_tipo.tag.endswith('}ICMS90'):
-                                item['icms_cst'] = icms_tipo.findtext('nfe:CST', '', ns) or icms_tipo.findtext('nfe:CSOSN', '', ns)
-                                item['icms_base_calculo'] = icms_tipo.findtext('nfe:vBC', '', ns)
-                                item['icms_aliquota'] = icms_tipo.findtext('nfe:pICMS', '', ns)
-                                item['icms_valor'] = icms_tipo.findtext('nfe:vICMS', '', ns)
+            #     # Informações sobre impostos
+            #     # imposto = det.find('nfe:imposto', ns)
+            #     # if imposto is not None:
+            #     #     icms = imposto.find('.//nfe:ICMS', ns)
+            #     #     if icms is not None:
+            #     #         for icms_tipo in icms:
+            #     #             if icms_tipo.tag.endswith('}ICMS00') or icms_tipo.tag.endswith('}ICMS10') or \
+            #     #                icms_tipo.tag.endswith('}ICMS20') or icms_tipo.tag.endswith('}ICMS30') or \
+            #     #                icms_tipo.tag.endswith('}ICMS40') or icms_tipo.tag.endswith('}ICMS51') or \
+            #     #                icms_tipo.tag.endswith('}ICMS60') or icms_tipo.tag.endswith('}ICMS70') or \
+            #     #                icms_tipo.tag.endswith('}ICMS90'):
+            #     #                 item['icms_cst'] = icms_tipo.findtext('nfe:CST', '', ns) or icms_tipo.findtext('nfe:CSOSN', '', ns)
+            #     #                 item['icms_base_calculo'] = icms_tipo.findtext('nfe:vBC', '', ns)
+            #     #                 item['icms_aliquota'] = icms_tipo.findtext('nfe:pICMS', '', ns)
+            #     #                 item['icms_valor'] = icms_tipo.findtext('nfe:vICMS', '', ns)
                     
-                    ipi = imposto.find('.//nfe:IPI', ns)
-                    if ipi is not None:
-                        item['ipi_cst'] = ipi.findtext('.//nfe:CST', '', ns)
-                        item['ipi_base_calculo'] = ipi.findtext('.//nfe:vBC', '', ns)
-                        item['ipi_aliquota'] = ipi.findtext('.//nfe:pIPI', '', ns)
-                        item['ipi_valor'] = ipi.findtext('.//nfe:vIPI', '', ns)
+            #     #     ipi = imposto.find('.//nfe:IPI', ns)
+            #     #     if ipi is not None:
+            #     #         item['ipi_cst'] = ipi.findtext('.//nfe:CST', '', ns)
+            #     #         item['ipi_base_calculo'] = ipi.findtext('.//nfe:vBC', '', ns)
+            #     #         item['ipi_aliquota'] = ipi.findtext('.//nfe:pIPI', '', ns)
+            #     #         item['ipi_valor'] = ipi.findtext('.//nfe:vIPI', '', ns)
                     
-                    pis = imposto.find('.//nfe:PIS', ns)
-                    if pis is not None:
-                        for pis_tipo in pis:
-                            if pis_tipo.tag.endswith('}PISAliq') or pis_tipo.tag.endswith('}PISQtde') or \
-                               pis_tipo.tag.endswith('}PISNT') or pis_tipo.tag.endswith('}PISOutr'):
-                                item['pis_cst'] = pis_tipo.findtext('nfe:CST', '', ns)
-                                item['pis_base_calculo'] = pis_tipo.findtext('nfe:vBC', '', ns)
-                                item['pis_aliquota'] = pis_tipo.findtext('nfe:pPIS', '', ns)
-                                item['pis_valor'] = pis_tipo.findtext('nfe:vPIS', '', ns)
+            #     #     pis = imposto.find('.//nfe:PIS', ns)
+            #     #     if pis is not None:
+            #     #         for pis_tipo in pis:
+            #     #             if pis_tipo.tag.endswith('}PISAliq') or pis_tipo.tag.endswith('}PISQtde') or \
+            #     #                pis_tipo.tag.endswith('}PISNT') or pis_tipo.tag.endswith('}PISOutr'):
+            #     #                 item['pis_cst'] = pis_tipo.findtext('nfe:CST', '', ns)
+            #     #                 item['pis_base_calculo'] = pis_tipo.findtext('nfe:vBC', '', ns)
+            #     #                 item['pis_aliquota'] = pis_tipo.findtext('nfe:pPIS', '', ns)
+            #     #                 item['pis_valor'] = pis_tipo.findtext('nfe:vPIS', '', ns)
                     
-                    cofins = imposto.find('.//nfe:COFINS', ns)
-                    if cofins is not None:
-                        for cofins_tipo in cofins:
-                            if cofins_tipo.tag.endswith('}COFINSAliq') or cofins_tipo.tag.endswith('}COFINSQtde') or \
-                               cofins_tipo.tag.endswith('}COFINSNT') or cofins_tipo.tag.endswith('}COFINSOutr'):
-                                item['cofins_cst'] = cofins_tipo.findtext('nfe:CST', '', ns)
-                                item['cofins_base_calculo'] = cofins_tipo.findtext('nfe:vBC', '', ns)
-                                item['cofins_aliquota'] = cofins_tipo.findtext('nfe:pCOFINS', '', ns)
-                                item['cofins_valor'] = cofins_tipo.findtext('nfe:vCOFINS', '', ns)
+            #     #     cofins = imposto.find('.//nfe:COFINS', ns)
+            #     #     if cofins is not None:
+            #     #         for cofins_tipo in cofins:
+            #     #             if cofins_tipo.tag.endswith('}COFINSAliq') or cofins_tipo.tag.endswith('}COFINSQtde') or \
+            #     #                cofins_tipo.tag.endswith('}COFINSNT') or cofins_tipo.tag.endswith('}COFINSOutr'):
+            #     #                 item['cofins_cst'] = cofins_tipo.findtext('nfe:CST', '', ns)
+            #     #                 item['cofins_base_calculo'] = cofins_tipo.findtext('nfe:vBC', '', ns)
+            #     #                 item['cofins_aliquota'] = cofins_tipo.findtext('nfe:pCOFINS', '', ns)
+            #     #                 item['cofins_valor'] = cofins_tipo.findtext('nfe:vCOFINS', '', ns)
                 
-                itens.append(item)
+            #     itens.append(item)
             
-            dados_nfe['itens'] = itens
+            # nota_fiscal['itens'] = itens
             
             # Totais da NFe
-            total = root.find('.//nfe:total', ns)
-            if total is not None:
-                icmstot = total.find('nfe:ICMSTot', ns)
-                if icmstot is not None:
-                    dados_nfe['total'] = {
-                        'base_calculo_icms': icmstot.findtext('nfe:vBC', '', ns),
-                        'valor_icms': icmstot.findtext('nfe:vICMS', '', ns),
-                        'base_calculo_icms_st': icmstot.findtext('nfe:vBCST', '', ns),
-                        'valor_icms_st': icmstot.findtext('nfe:vST', '', ns),
-                        'valor_produtos': icmstot.findtext('nfe:vProd', '', ns),
-                        'valor_frete': icmstot.findtext('nfe:vFrete', '', ns),
-                        'valor_seguro': icmstot.findtext('nfe:vSeg', '', ns),
-                        'valor_desconto': icmstot.findtext('nfe:vDesc', '', ns),
-                        'valor_ipi': icmstot.findtext('nfe:vIPI', '', ns),
-                        'valor_pis': icmstot.findtext('nfe:vPIS', '', ns),
-                        'valor_cofins': icmstot.findtext('nfe:vCOFINS', '', ns),
-                        'valor_outras_despesas': icmstot.findtext('nfe:vOutro', '', ns),
-                        'valor_total': icmstot.findtext('nfe:vNF', '', ns),
-                    }
+            # total = root.find('.//nfe:total', ns)
+            # if total is not None:
+            #     icmstot = total.find('nfe:ICMSTot', ns)
+            #     if icmstot is not None:
+            #         nota_fiscal['total'] = {
+            #             'base_calculo_icms': icmstot.findtext('nfe:vBC', '', ns),
+            #             'valor_icms': icmstot.findtext('nfe:vICMS', '', ns),
+            #             'base_calculo_icms_st': icmstot.findtext('nfe:vBCST', '', ns),
+            #             'valor_icms_st': icmstot.findtext('nfe:vST', '', ns),
+            #             'valor_produtos': icmstot.findtext('nfe:vProd', '', ns),
+            #             'valor_frete': icmstot.findtext('nfe:vFrete', '', ns),
+            #             'valor_seguro': icmstot.findtext('nfe:vSeg', '', ns),
+            #             'valor_desconto': icmstot.findtext('nfe:vDesc', '', ns),
+            #             'valor_ipi': icmstot.findtext('nfe:vIPI', '', ns),
+            #             'valor_pis': icmstot.findtext('nfe:vPIS', '', ns),
+            #             'valor_cofins': icmstot.findtext('nfe:vCOFINS', '', ns),
+            #             'valor_outras_despesas': icmstot.findtext('nfe:vOutro', '', ns),
+            #             'valor_total': icmstot.findtext('nfe:vNF', '', ns),
+            #         }
             
             # Informações de pagamento
-            pag = root.find('.//nfe:pag', ns)
-            if pag is not None:
-                dados_nfe['pagamentos'] = []
-                for detPag in pag.findall('nfe:detPag', ns):
-                    pagamento = {
-                        'forma': detPag.findtext('nfe:tPag', '', ns),
-                        'valor': detPag.findtext('nfe:vPag', '', ns),
-                    }
-                    dados_nfe['pagamentos'].append(pagamento)
+            # pag = root.find('.//nfe:pag', ns)
+            # if pag is not None:
+            #     nota_fiscal['pagamentos'] = []
+            #     for detPag in pag.findall('nfe:detPag', ns):
+            #         pagamento = {
+            #             'forma': detPag.findtext('nfe:tPag', '', ns),
+            #             'valor': detPag.findtext('nfe:vPag', '', ns),
+            #         }
+            #         nota_fiscal['pagamentos'].append(pagamento)
             
             # Informações adicionais
-            infAdic = root.find('.//nfe:infAdic', ns)
-            if infAdic is not None:
-                dados_nfe['informacoes_adicionais'] = {
-                    'informacoes_fisco': infAdic.findtext('nfe:infAdFisco', '', ns),
-                    'informacoes_complementares': infAdic.findtext('nfe:infCpl', '', ns),
-                }
+            # infAdic = root.find('.//nfe:infAdic', ns)
+            # if infAdic is not None:
+            #     nota_fiscal['informacoes_adicionais'] = {
+            #         'informacoes_fisco': infAdic.findtext('nfe:infAdFisco', '', ns),
+            #         'informacoes_complementares': infAdic.findtext('nfe:infCpl', '', ns),
+            #     }
             
             # Adicionar timestamp de processamento
-            dados_nfe['data_processamento'] = datetime.now()
-            dados_nfe['nome_arquivo'] = os.path.basename(caminho_xml)
+            # nota_fiscal['data_processamento'] = datetime.now()
+            # nota_fiscal['nome_arquivo'] = os.path.basename(caminho_xml)
             
-            return dados_nfe
+            return lst_dics
         
         except Exception as e:
             self.log.error(f"Erro ao processar o arquivo {caminho_xml}: {str(e)}")
             return None
     
-    def save_to_postgres(self, pg_hook: PostgresHook, dados_nfe: Dict[str, Any]) -> None:
+    def save_to_postgres(self, pg_hook: PostgresHook, nota_fiscal: Dict[str, Any]) -> None:
         """
         Salva os dados extraídos da NFe no PostgreSQL.
         
         :param pg_hook: Instância do PostgresHook para conectar ao banco
-        :param dados_nfe: Dicionário com os dados extraídos da NFe
+        :param nota_fiscal: Dicionário com os dados extraídos da NFe
         :return: None
         """
         # Criar uma cópia do dicionário para não modificar o original
-        dados_para_inserir = dados_nfe.copy()
+        dados_para_inserir = nota_fiscal.copy()
         
         # Converter estruturas aninhadas para JSON
-        for key, value in dados_para_inserir.items():
-            if isinstance(value, (dict, list)):
-                dados_para_inserir[key] = json.dumps(value, ensure_ascii=False)
+        # for key, value in dados_para_inserir.items():
+        #     if isinstance(value, (dict, list)):
+        #         dados_para_inserir[key] = json.dumps(value, ensure_ascii=False)
         
         # Inserir na tabela principal de NFes
-        columns = ', '.join(dados_para_inserir.keys())
-        values = ', '.join(['%s'] * len(dados_para_inserir))
+        # columns = ', '.join(dados_para_inserir.keys())
+        # values = ', '.join(['%s'] * len(dados_para_inserir))
         
-        insert_sql = f"""
-        INSERT INTO {self.table_name} ({columns})
-        VALUES ({values})
-        ON CONFLICT (chave_acesso) 
-        DO UPDATE SET 
-            data_processamento = EXCLUDED.data_processamento
-        """
+        for tabela, dados in dados_para_inserir.items():
+            colunas = ', '.join(dados.keys())
+            valores = tuple(dados.values())
+            placeholders = ', '.join(['%s'] * len(valores))
+
+            sql = f"""INSERT INTO {tabela} ({colunas}) 
+            VALUES ({placeholders})"""
+            pg_hook.run(sql, parameters=valores, autocommit=True)
+
+
+        # insert_sql = f"""
+        # INSERT INTO {self.table_name} ({columns})
+        # VALUES ({values})
+        # """
         
         # pg_hook.run(insert_sql, parameters=list(dados_para_inserir.values()))
-        pg_hook.run(insert_sql, parameters=list(dados_para_inserir.values()), autocommit=True)
-        self.log.info(f"Dados da NFe {dados_nfe.get('numero')} salvos no PostgreSQL.")
+        # pg_hook.run(insert_sql, parameters=list(dados_para_inserir.values()), autocommit=True)
+        # self.log.info(f"Dados da NFe {nota_fiscal.get('numero')} salvos no PostgreSQL.")

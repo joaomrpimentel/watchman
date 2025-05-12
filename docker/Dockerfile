@@ -21,6 +21,10 @@ RUN pip install --no-cache-dir -r /requirements.txt
 # Criar diretórios de dados
 RUN mkdir -p /opt/airflow/data/raw /opt/airflow/data/processed
 
+# Criar /sources e subdiretórios esperados
+# RUN mkdir -p /sources/logs /sources/dags /sources/plugins && \
+#     chown -R airflow:root /sources
+
 # Definir permissões
 USER root
 RUN chown -R airflow:root /opt/airflow/data

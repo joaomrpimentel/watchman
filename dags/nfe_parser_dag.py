@@ -29,33 +29,88 @@ with DAG(
         task_id='create_table_if_not_exists',
         postgres_conn_id='postgres_default',
         sql="""
-        CREATE TABLE IF NOT EXISTS nfe_dados (
-            id SERIAL PRIMARY KEY,
-            chave_acesso VARCHAR(255) UNIQUE,
-            numero VARCHAR(50),
-            serie VARCHAR(50),
-            data_emissao TIMESTAMP,  -- Alterado para TIMESTAMP
-            natureza_operacao TEXT,
-            emitente_nome TEXT,
-            emitente_cnpj VARCHAR(50),
-            emitente_ie VARCHAR(50),
-            emitente_endereco JSONB,
-            destinatario_nome TEXT,
-            destinatario_cnpj VARCHAR(50),
-            destinatario_ie VARCHAR(50),
-            destinatario_endereco JSONB,
-            itens JSONB,
-            total JSONB,
-            pagamentos JSONB,
-            informacoes_adicionais JSONB,
-            data_processamento TIMESTAMP,
-            nome_arquivo VARCHAR(255)
-        );
-        
-        -- Índices para otimizar consultas
-        CREATE INDEX IF NOT EXISTS idx_nfe_emitente_cnpj ON nfe_dados(emitente_cnpj);
-        CREATE INDEX IF NOT EXISTS idx_nfe_destinatario_cnpj ON nfe_dados(destinatario_cnpj);
-        CREATE INDEX IF NOT EXISTS idx_nfe_data_emissao ON nfe_dados(data_emissao);
+        CREATE TABLE IF NOT EXISTS PESSOA_FISICA (
+    cpf VARCHAR(20),
+    id SERIAL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS PESSOA_JURIDICA (
+    cnpj VARCHAR(20),
+    inscricaoEstadual INTEGER,
+    cnae VARCHAR(20),
+    id SERIAL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS ENDERECO_ENTIDADE_SOCIAL (
+    cep VARCHAR(20),
+    rua VARCHAR(255),
+    numero INTEGER,
+    bairro VARCHAR(255),
+    cidade VARCHAR(255),
+    estado CHAR(2),
+    id SERIAL PRIMARY KEY,
+    pais VARCHAR(20),
+    nome VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS NOTA_FISCAL (
+    id SERIAL PRIMARY KEY,
+    chaveAcesso INTEGER,
+    numero INTEGER,
+    serie INTEGER,
+    dataEmissao TIMESTAMP,
+    tributoFederal DECIMAL,
+    tributoEstadual DECIMAL,
+    idVendedor INTEGER,
+    idComprador INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS ITEM (
+    id SERIAL PRIMARY KEY,
+    quantidade DECIMAL,
+    valor DECIMAL,
+    desconto DECIMAL,
+    tributos DECIMAL,
+    discriminacao VARCHAR(255),
+    idNotaFiscal INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS SERVICO (
+    id SERIAL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS PRODUTO (
+    cEnqLegal INTEGER,
+    cfop INTEGER,
+    frete DECIMAL,
+    id SERIAL PRIMARY KEY
+);
+
+-- Adicionando constraints depois da criação das tabelas
+ALTER TABLE IF EXISTS NOTA_FISCAL ADD CONSTRAINT IF NOT EXISTS FK_NOTA_FISCAL_ID_VENDEDOR
+    FOREIGN KEY (idVendedor)
+    REFERENCES PESSOA_JURIDICA (id)
+    ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS NOTA_FISCAL ADD CONSTRAINT IF NOT EXISTS FK_NOTA_FISCAL_ID_COMPRADOR
+    FOREIGN KEY (idComprador)
+    REFERENCES PESSOA_FISICA (id)
+    ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS ITEM ADD CONSTRAINT IF NOT EXISTS FK_ITEM_2
+    FOREIGN KEY (idNotaFiscal)
+    REFERENCES NOTA_FISCAL (id)
+    ON DELETE RESTRICT;
+
+ALTER TABLE IF EXISTS SERVICO ADD CONSTRAINT IF NOT EXISTS FK_SERVICO_2
+    FOREIGN KEY (id)
+    REFERENCES ITEM (id)
+    ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS PRODUTO ADD CONSTRAINT IF NOT EXISTS FK_PRODUTO_2
+    FOREIGN KEY (id)
+    REFERENCES ITEM (id)
+    ON DELETE CASCADE;
         """
     )
 
@@ -93,4 +148,5 @@ with DAG(
     )
 
     # Definir o fluxo de execução das tarefas
-    create_table >> process_nfe_files >> clean_old_processed_files
+    # create_table >> process_nfe_files >> clean_old_processed_files
+    process_nfe_files >> clean_old_processed_files
