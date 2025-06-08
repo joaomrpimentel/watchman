@@ -24,39 +24,11 @@ with DAG(
     tags=['nfe', 'parser', 'xml'],
 ) as dag:
 
-    # Tarefa para verificar e criar a tabela no PostgreSQL se não existir
-    create_table = PostgresOperator(
-        task_id='create_table_if_not_exists',
+    # Tarefa para verificar e criar o esquema e tabelas no PostgreSQL se não existirem
+    create_schema_and_tables = PostgresOperator(
+        task_id='create_schema_and_tables_if_not_exists',
         postgres_conn_id='postgres_default',
-        sql="""
-        CREATE TABLE IF NOT EXISTS nfe_dados (
-            id SERIAL PRIMARY KEY,
-            chave_acesso VARCHAR(255) UNIQUE,
-            numero VARCHAR(50),
-            serie VARCHAR(50),
-            data_emissao TIMESTAMP,  -- Alterado para TIMESTAMP
-            natureza_operacao TEXT,
-            emitente_nome TEXT,
-            emitente_cnpj VARCHAR(50),
-            emitente_ie VARCHAR(50),
-            emitente_endereco JSONB,
-            destinatario_nome TEXT,
-            destinatario_cnpj VARCHAR(50),
-            destinatario_ie VARCHAR(50),
-            destinatario_endereco JSONB,
-            itens JSONB,
-            total JSONB,
-            pagamentos JSONB,
-            informacoes_adicionais JSONB,
-            data_processamento TIMESTAMP,
-            nome_arquivo VARCHAR(255)
-        );
-        
-        -- Índices para otimizar consultas
-        CREATE INDEX IF NOT EXISTS idx_nfe_emitente_cnpj ON nfe_dados(emitente_cnpj);
-        CREATE INDEX IF NOT EXISTS idx_nfe_destinatario_cnpj ON nfe_dados(destinatario_cnpj);
-        CREATE INDEX IF NOT EXISTS idx_nfe_data_emissao ON nfe_dados(data_emissao);
-        """
+        sql=open('/opt/airflow/scripts/init_db.sql').read()
     )
 
     # Tarefa para processar os arquivos XML e salvar no PostgreSQL
@@ -65,7 +37,7 @@ with DAG(
         source_folder='/opt/airflow/data/raw',
         destination_folder='/opt/airflow/data/processed',
         postgres_conn_id='postgres_default',
-        table_name='nfe_dados',
+        table_name='nfe', # Keeping it for compatibility, though actual insertions will be to various tables.
     )
 
     # Tarefa para limpeza de arquivos antigos (opcional)
@@ -92,5 +64,5 @@ with DAG(
         python_callable=clean_old_files,
     )
 
-    # Definir o fluxo de execução das tarefas
-    create_table >> process_nfe_files >> clean_old_processed_files
+    # Definir a ordem das tarefas
+    create_schema_and_tables >> process_nfe_files >> clean_old_processed_files
