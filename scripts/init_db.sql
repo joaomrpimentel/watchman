@@ -10,7 +10,7 @@ SET search_path TO nfe, public;
 -- 1. TABELA PESSOA (Generalização)
 -- Substitui: emitente, destinatario, transportadora
 -- ========================================
-CREATE TABLE pessoa (
+CREATE TABLE IF NOT EXISTS pessoa (
     id SERIAL PRIMARY KEY,
     tipo_pessoa VARCHAR(20) NOT NULL, -- 'EMITENTE', 'DESTINATARIO', 'TRANSPORTADORA'
     cnpj VARCHAR(14),
@@ -34,15 +34,15 @@ CREATE TABLE pessoa (
     CONSTRAINT ck_pessoa_tipo CHECK (tipo_pessoa IN ('EMITENTE', 'DESTINATARIO', 'TRANSPORTADORA'))
 );
 
-CREATE INDEX idx_pessoa_tipo ON pessoa(tipo_pessoa);
-CREATE INDEX idx_pessoa_cnpj ON pessoa(cnpj);
-CREATE INDEX idx_pessoa_cpf ON pessoa(cpf);
+CREATE INDEX IF NOT EXISTS idx_pessoa_tipo ON pessoa(tipo_pessoa);
+CREATE INDEX IF NOT EXISTS idx_pessoa_cnpj ON pessoa(cnpj);
+CREATE INDEX IF NOT EXISTS idx_pessoa_cpf ON pessoa(cpf);
 
 -- ========================================
 -- 2. TABELA ENDERECO (Generalização)
 -- Substitui: endereco_emitente, endereco_destinatario, local_retirada, local_entrega
 -- ========================================
-CREATE TABLE endereco (
+CREATE TABLE IF NOT EXISTS endereco (
     id SERIAL PRIMARY KEY,
     pessoa_id INTEGER REFERENCES pessoa(id) ON DELETE CASCADE,
     nfe_id INTEGER, -- Para locais de retirada/entrega sem pessoa específica
@@ -69,15 +69,15 @@ CREATE TABLE endereco (
     CONSTRAINT ck_endereco_tipo CHECK (tipo_endereco IN ('PRINCIPAL', 'RETIRADA', 'ENTREGA'))
 );
 
-CREATE INDEX idx_endereco_pessoa_id ON endereco(pessoa_id);
-CREATE INDEX idx_endereco_nfe_id ON endereco(nfe_id);
-CREATE INDEX idx_endereco_tipo ON endereco(tipo_endereco);
+CREATE INDEX IF NOT EXISTS idx_endereco_pessoa_id ON endereco(pessoa_id);
+CREATE INDEX IF NOT EXISTS idx_endereco_nfe_id ON endereco(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_endereco_tipo ON endereco(tipo_endereco);
 
 -- ========================================
 -- 3. TABELA NFE_PESSOA (Relacionamento)
 -- Liga NFe com pessoas (emitente, destinatário)
 -- ========================================
-CREATE TABLE nfe_pessoa (
+CREATE TABLE IF NOT EXISTS nfe_pessoa (
     id SERIAL PRIMARY KEY,
     nfe_id INTEGER NOT NULL,
     pessoa_id INTEGER NOT NULL REFERENCES pessoa(id) ON DELETE CASCADE,
@@ -87,14 +87,14 @@ CREATE TABLE nfe_pessoa (
     CONSTRAINT ck_nfe_pessoa_tipo CHECK (tipo_relacao IN ('EMITENTE', 'DESTINATARIO'))
 );
 
-CREATE INDEX idx_nfe_pessoa_nfe_id ON nfe_pessoa(nfe_id);
-CREATE INDEX idx_nfe_pessoa_pessoa_id ON nfe_pessoa(pessoa_id);
+CREATE INDEX IF NOT EXISTS idx_nfe_pessoa_nfe_id ON nfe_pessoa(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_nfe_pessoa_pessoa_id ON nfe_pessoa(pessoa_id);
 
 -- ========================================
 -- 4. TABELA IMPOSTO (Generalização)
 -- Substitui: imposto_icms, imposto_pis, imposto_cofins, imposto_ipi
 -- ========================================
-CREATE TABLE imposto (
+CREATE TABLE IF NOT EXISTS imposto (
     id SERIAL PRIMARY KEY,
     item_nfe_id INTEGER NOT NULL,
     tipo_imposto VARCHAR(10) NOT NULL, -- 'ICMS', 'PIS', 'COFINS', 'IPI'
@@ -137,15 +137,15 @@ CREATE TABLE imposto (
     CONSTRAINT ck_imposto_tipo CHECK (tipo_imposto IN ('ICMS', 'PIS', 'COFINS', 'IPI'))
 );
 
-CREATE INDEX idx_imposto_item_nfe_id ON imposto(item_nfe_id);
-CREATE INDEX idx_imposto_tipo ON imposto(tipo_imposto);
-CREATE INDEX idx_imposto_item_tipo ON imposto(item_nfe_id, tipo_imposto);
+CREATE INDEX IF NOT EXISTS idx_imposto_item_nfe_id ON imposto(item_nfe_id);
+CREATE INDEX IF NOT EXISTS idx_imposto_tipo ON imposto(tipo_imposto);
+CREATE INDEX IF NOT EXISTS idx_imposto_item_tipo ON imposto(item_nfe_id, tipo_imposto);
 
 -- ========================================
 -- 5. TABELA TRANSPORTE_ITEM (Generalização)
 -- Substitui: volume_transporte, veiculo_transporte, lacre_volume
 -- ========================================
-CREATE TABLE transporte_item (
+CREATE TABLE IF NOT EXISTS transporte_item (
     id SERIAL PRIMARY KEY,
     transporte_id INTEGER NOT NULL,
     tipo_item VARCHAR(20) NOT NULL, -- 'VOLUME', 'VEICULO', 'LACRE'
@@ -173,16 +173,16 @@ CREATE TABLE transporte_item (
     CONSTRAINT ck_transporte_item_tipo CHECK (tipo_item IN ('VOLUME', 'VEICULO', 'LACRE'))
 );
 
-CREATE INDEX idx_transporte_item_transporte_id ON transporte_item(transporte_id);
-CREATE INDEX idx_transporte_item_tipo ON transporte_item(tipo_item);
-CREATE INDEX idx_transporte_item_pai_id ON transporte_item(item_pai_id);
+CREATE INDEX IF NOT EXISTS idx_transporte_item_transporte_id ON transporte_item(transporte_id);
+CREATE INDEX IF NOT EXISTS idx_transporte_item_tipo ON transporte_item(tipo_item);
+CREATE INDEX IF NOT EXISTS idx_transporte_item_pai_id ON transporte_item(item_pai_id);
 
 -- ========================================
 -- TABELAS MANTIDAS (com ajustes mínimos)
 -- ========================================
 
 -- Tabela principal da NFe (mantida)
-CREATE TABLE nfe (
+CREATE TABLE IF NOT EXISTS nfe (
     id SERIAL PRIMARY KEY,
     chave_acesso VARCHAR(44) UNIQUE NOT NULL,
     versao VARCHAR(10) NOT NULL,
@@ -209,11 +209,11 @@ CREATE TABLE nfe (
     status_processamento VARCHAR(20) DEFAULT 'PENDENTE'
 );
 
-CREATE INDEX idx_nfe_chave_acesso ON nfe(chave_acesso);
-CREATE INDEX idx_nfe_data_emissao ON nfe(data_emissao);
+CREATE INDEX IF NOT EXISTS idx_nfe_chave_acesso ON nfe(chave_acesso);
+CREATE INDEX IF NOT EXISTS idx_nfe_data_emissao ON nfe(data_emissao);
 
 -- Tabela de itens da NFe (mantida)
-CREATE TABLE item_nfe (
+CREATE TABLE IF NOT EXISTS item_nfe (
     id SERIAL PRIMARY KEY,
     nfe_id INTEGER NOT NULL REFERENCES nfe(id) ON DELETE CASCADE,
     numero_item INTEGER NOT NULL,
@@ -236,11 +236,11 @@ CREATE TABLE item_nfe (
     CONSTRAINT uk_item_nfe UNIQUE (nfe_id, numero_item)
 );
 
-CREATE INDEX idx_item_nfe_nfe_id ON item_nfe(nfe_id);
-CREATE INDEX idx_item_nfe_codigo_produto ON item_nfe(codigo_produto);
+CREATE INDEX IF NOT EXISTS idx_item_nfe_nfe_id ON item_nfe(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_item_nfe_codigo_produto ON item_nfe(codigo_produto);
 
 -- Tabela de totais da NFe (mantida)
-CREATE TABLE totais_nfe (
+CREATE TABLE IF NOT EXISTS totais_nfe (
     id SERIAL PRIMARY KEY,
     nfe_id INTEGER NOT NULL REFERENCES nfe(id) ON DELETE CASCADE,
     base_calculo_icms NUMERIC(16,2) NOT NULL,
@@ -261,10 +261,10 @@ CREATE TABLE totais_nfe (
     data_atualizacao TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_totais_nfe_nfe_id ON totais_nfe(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_totais_nfe_nfe_id ON totais_nfe(nfe_id);
 
 -- Tabela de transporte (ajustada)
-CREATE TABLE transporte (
+CREATE TABLE IF NOT EXISTS transporte (
     id SERIAL PRIMARY KEY,
     nfe_id INTEGER NOT NULL REFERENCES nfe(id) ON DELETE CASCADE,
     modalidade_frete SMALLINT NOT NULL,
@@ -273,11 +273,11 @@ CREATE TABLE transporte (
     data_atualizacao TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_transporte_nfe_id ON transporte(nfe_id);
-CREATE INDEX idx_transporte_transportadora_id ON transporte(transportadora_id);
+CREATE INDEX IF NOT EXISTS idx_transporte_nfe_id ON transporte(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_transporte_transportadora_id ON transporte(transportadora_id);
 
 -- Tabela de informações adicionais (mantida)
-CREATE TABLE informacoes_adicionais (
+CREATE TABLE IF NOT EXISTS informacoes_adicionais (
     id SERIAL PRIMARY KEY,
     nfe_id INTEGER NOT NULL REFERENCES nfe(id) ON DELETE CASCADE,
     info_contribuinte TEXT,
@@ -286,10 +286,10 @@ CREATE TABLE informacoes_adicionais (
     data_atualizacao TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_informacoes_adicionais_nfe_id ON informacoes_adicionais(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_informacoes_adicionais_nfe_id ON informacoes_adicionais(nfe_id);
 
 -- Tabela de processamento da NFe (mantida)
-CREATE TABLE processamento_nfe (
+CREATE TABLE IF NOT EXISTS processamento_nfe (
     id SERIAL PRIMARY KEY,
     nfe_id INTEGER NOT NULL REFERENCES nfe(id) ON DELETE CASCADE,
     data_processamento TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -301,17 +301,17 @@ CREATE TABLE processamento_nfe (
     data_atualizacao TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_processamento_nfe_nfe_id ON processamento_nfe(nfe_id);
-CREATE INDEX idx_processamento_nfe_status ON processamento_nfe(status);
-CREATE INDEX idx_processamento_nfe_data_processamento ON processamento_nfe(data_processamento);
+CREATE INDEX IF NOT EXISTS idx_processamento_nfe_nfe_id ON processamento_nfe(nfe_id);
+CREATE INDEX IF NOT EXISTS idx_processamento_nfe_status ON processamento_nfe(status);
+CREATE INDEX IF NOT EXISTS idx_processamento_nfe_data_processamento ON processamento_nfe(data_processamento);
 
 -- ========================================
 -- ADIÇÃO DAS FOREIGN KEYS APÓS CRIAÇÃO
 -- ========================================
-ALTER TABLE nfe_pessoa ADD CONSTRAINT fk_nfe_pessoa_nfe FOREIGN KEY (nfe_id) REFERENCES nfe(id) ON DELETE CASCADE;
-ALTER TABLE endereco ADD CONSTRAINT fk_endereco_nfe FOREIGN KEY (nfe_id) REFERENCES nfe(id) ON DELETE CASCADE;
-ALTER TABLE imposto ADD CONSTRAINT fk_imposto_item_nfe FOREIGN KEY (item_nfe_id) REFERENCES item_nfe(id) ON DELETE CASCADE;
-ALTER TABLE transporte_item ADD CONSTRAINT fk_transporte_item_transporte FOREIGN KEY (transporte_id) REFERENCES transporte(id) ON DELETE CASCADE;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_nfe_pessoa_nfe' AND conrelid = 'nfe_pessoa'::regclass) THEN ALTER TABLE nfe_pessoa ADD CONSTRAINT fk_nfe_pessoa_nfe FOREIGN KEY (nfe_id) REFERENCES nfe(id) ON DELETE CASCADE; END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_endereco_nfe' AND conrelid = 'endereco'::regclass) THEN ALTER TABLE endereco ADD CONSTRAINT fk_endereco_nfe FOREIGN KEY (nfe_id) REFERENCES nfe(id) ON DELETE CASCADE; END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_imposto_item_nfe' AND conrelid = 'imposto'::regclass) THEN ALTER TABLE imposto ADD CONSTRAINT fk_imposto_item_nfe FOREIGN KEY (item_nfe_id) REFERENCES item_nfe(id) ON DELETE CASCADE; END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_transporte_item_transporte' AND conrelid = 'transporte_item'::regclass) THEN ALTER TABLE transporte_item ADD CONSTRAINT fk_transporte_item_transporte FOREIGN KEY (transporte_id) REFERENCES transporte(id) ON DELETE CASCADE; END IF; END $$;
 
 -- ========================================
 -- COMENTÁRIOS NAS TABELAS OTIMIZADAS
@@ -327,28 +327,28 @@ COMMENT ON TABLE transporte_item IS 'Tabela generalizada para volumes, veículos
 -- ========================================
 
 -- View para emitentes
-CREATE VIEW v_emitentes AS
+CREATE OR REPLACE VIEW v_emitentes AS
 SELECT p.*, e.logradouro, e.numero, e.bairro, e.municipio, e.uf, e.cep
 FROM pessoa p
 LEFT JOIN endereco e ON p.id = e.pessoa_id AND e.tipo_endereco = 'PRINCIPAL'
 WHERE p.tipo_pessoa = 'EMITENTE';
 
 -- View para destinatários
-CREATE VIEW v_destinatarios AS
+CREATE OR REPLACE VIEW v_destinatarios AS
 SELECT p.*, e.logradouro, e.numero, e.bairro, e.municipio, e.uf, e.cep
 FROM pessoa p
 LEFT JOIN endereco e ON p.id = e.pessoa_id AND e.tipo_endereco = 'PRINCIPAL'
 WHERE p.tipo_pessoa = 'DESTINATARIO';
 
 -- View para impostos por tipo
-CREATE VIEW v_impostos_icms AS
+CREATE OR REPLACE VIEW v_impostos_icms AS
 SELECT * FROM imposto WHERE tipo_imposto = 'ICMS';
 
-CREATE VIEW v_impostos_pis AS
+CREATE OR REPLACE VIEW v_impostos_pis AS
 SELECT * FROM imposto WHERE tipo_imposto = 'PIS';
 
-CREATE VIEW v_impostos_cofins AS
+CREATE OR REPLACE VIEW v_impostos_cofins AS
 SELECT * FROM imposto WHERE tipo_imposto = 'COFINS';
 
-CREATE VIEW v_impostos_ipi AS
+CREATE OR REPLACE VIEW v_impostos_ipi AS
 SELECT * FROM imposto WHERE tipo_imposto = 'IPI';
