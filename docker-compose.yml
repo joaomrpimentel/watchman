@@ -27,6 +27,16 @@ x-airflow-common: &airflow-common
       condition: service_healthy
 
 services:
+  flask-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.flask
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/raw:/app/data/raw
+    depends_on:
+      - postgres
   postgres:
     image: postgres:15
     environment:

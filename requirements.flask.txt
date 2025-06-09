@@ -1,0 +1,4 @@
+Flask
+Werkzeug
+gunicorn
+Flask-CORS
