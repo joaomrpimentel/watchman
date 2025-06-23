@@ -95,6 +95,7 @@ class NFeParserOperator(BaseOperator):
         if not date_str:
             return None
         try:
+            # Remove o timezone para usar o fromisoformat que é mais flexível
             if '+' in date_str or (date_str.count('-') > 2 and not date_str.endswith('Z')):
                  date_str = date_str.rsplit('-', 1)[0]
             
@@ -123,6 +124,7 @@ class NFeParserOperator(BaseOperator):
 
             ide = root.find('.//nfe:ide', self.ns)
             if ide is not None:
+                # CORREÇÃO: Adicionado `namespaces=self.ns` em todas as chamadas findtext
                 extracted_data['nfe']['codigo_uf'] = int(ide.findtext('nfe:cUF', '0', self.ns))
                 extracted_data['nfe']['codigo_nf'] = ide.findtext('nfe:cNF', '', self.ns)
                 extracted_data['nfe']['natureza_operacao'] = ide.findtext('nfe:natOp', '', self.ns)
