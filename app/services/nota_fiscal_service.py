@@ -2,7 +2,7 @@ import psycopg2
 import psycopg2.extras
 from datetime import date, datetime
 import logging
-from decimal import Decimal 
+from decimal import Decimal
 
 service_logger = logging.getLogger(__name__)
 service_logger.setLevel(logging.DEBUG)
@@ -39,9 +39,9 @@ class NotaFiscalService:
         if isinstance(obj, (bytes, bytearray)):
             return obj.decode('utf-8')
         if isinstance(obj, (int, float, str, bool, type(None))):
-            return obj 
+            return obj
         if isinstance(obj, Decimal):
-            return float(obj)       
+            return float(obj)
         if isinstance(obj, (list, tuple)):
             return [self._json_serial(item) for item in obj]
         if isinstance(obj, dict):
@@ -62,7 +62,9 @@ class NotaFiscalService:
 
             service_logger.debug(f"Tentando buscar NF-e com identificador: {identifier}")
 
-            if identifier.isdigit():
+            # Chave de acesso da NFe tem 44 dígitos
+            # Se for menor que 44 dígitos e só números, trata como ID
+            if identifier.isdigit() and len(identifier) < 44:
                 query_nfe = """
                 SELECT
                     n.id, n.chave_acesso, n.versao, n.codigo_uf, n.codigo_nf, n.natureza_operacao,
@@ -74,7 +76,9 @@ class NotaFiscalService:
                 WHERE n.id = %s;
                 """
                 cur.execute(query_nfe, (int(identifier),))
+                service_logger.debug(f"Buscando por ID: {identifier}")
             else:
+                # Trata como chave de acesso (44 dígitos ou qualquer string não numérica)
                 query_nfe = """
                 SELECT
                     n.id, n.chave_acesso, n.versao, n.codigo_uf, n.codigo_nf, n.natureza_operacao,
@@ -85,13 +89,14 @@ class NotaFiscalService:
                 FROM nfe.nfe n
                 WHERE n.chave_acesso = %s;
                 """
-                service_logger.debug(f"Executando query para chave de acesso: {identifier}")
+                service_logger.debug(f"Buscando por chave de acesso: {identifier}")
                 cur.execute(query_nfe, (identifier,))
 
             nfe_row = cur.fetchone()
             if not nfe_row:
                 service_logger.debug(f"NF-e com identificador {identifier} não encontrada no banco de dados.")
                 return None
+
 
             nfe_id = nfe_row['id']
             nfe_data = dict(nfe_row)
@@ -104,7 +109,7 @@ class NotaFiscalService:
             """, (nfe_id,))
             pessoa_rel_rows = cur.fetchall()
             service_logger.debug(f"Relações de pessoa para NF-e {nfe_id}: {pessoa_rel_rows}")
-            
+
             emitente_id = None
             destinatario_id = None
             for row in pessoa_rel_rows:
@@ -160,7 +165,7 @@ class NotaFiscalService:
             transporte_row = cur.fetchone()
             if transporte_row:
                 transporte_dict = dict(transporte_row)
-                
+
                 # Transportadora (Pessoa e Endereço)
                 if transporte_dict.get('transportadora_id'):
                     cur.execute("SELECT * FROM nfe.pessoa WHERE id = %s;", (transporte_dict['transportadora_id'],))
@@ -189,7 +194,7 @@ class NotaFiscalService:
                 cur.execute("SELECT * FROM nfe.transporte_item WHERE transporte_id = %s AND tipo_item = 'VEICULO';", (transporte_dict['id'],))
                 veiculos_rows = cur.fetchall()
                 transporte_dict['veiculos'] = [dict(veic) for veic in veiculos_rows]
-                
+
                 nfe_data['transporte'] = transporte_dict
             else:
                 nfe_data['transporte'] = None
@@ -239,7 +244,7 @@ class NotaFiscalService:
             results = []
             for row in nfe_summaries:
                 summary_dict = dict(row)
-                
+
                 # Buscar nome do emitente
                 if summary_dict.get('emitente_id'):
                     cur.execute("SELECT nome FROM nfe.pessoa WHERE id = %s;", (summary_dict['emitente_id'],))
@@ -251,7 +256,7 @@ class NotaFiscalService:
                     cur.execute("SELECT nome FROM nfe.pessoa WHERE id = %s;", (summary_dict['destinatario_id'],))
                     destinatario_name_row = cur.fetchone()
                     summary_dict['destinatario_nome'] = destinatario_name_row['nome'] if destinatario_name_row else None
-                
+
                 # Remover IDs de FK para a resposta final, se não quiser expô-los
                 summary_dict.pop('emitente_id', None)
                 summary_dict.pop('destinatario_id', None)
