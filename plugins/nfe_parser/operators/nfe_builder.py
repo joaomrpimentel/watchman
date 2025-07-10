@@ -1,4 +1,5 @@
-from product_nfe_builder import Product_NfeBuilder
+from .product_nfe_builder import Product_NfeBuilder
+
 
 class Builder:
     def __init__(self):
