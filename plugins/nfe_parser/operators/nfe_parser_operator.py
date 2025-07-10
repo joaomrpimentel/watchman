@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-from nfe_builder import Builder
+from .nfe_builder import Builder
 
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
