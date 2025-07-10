@@ -1,4 +1,4 @@
-from .product_nfe_builder import Product_NfeBuilder
+from nfe_parser.operators.product_nfe_builder import Product_NfeBuilder
 
 
 class Builder:
