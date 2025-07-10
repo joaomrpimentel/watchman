@@ -251,6 +251,3 @@ class Product_NfeBuilder:
             }
 
         return self
-
-    def build(self) -> Dict[str, Any]:
-        return self.data
